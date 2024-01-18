@@ -1,5 +1,5 @@
-import { FlatList, Pressable, ScrollView, StatusBar, StyleSheet, Text, TextInput, View } from 'react-native'
-import React, { useState } from 'react'
+import { Dimensions, FlatList, Pressable, ScrollView, StatusBar, StyleSheet, Text, TextInput, View } from 'react-native'
+import React, { useRef, useState } from 'react'
 import { useStore } from '../store/store'
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs'
 import { BORDERRADIUS, COLORS, FONTFAMILY, FONTSIZE, SPACING } from '../theme/theme'
@@ -31,7 +31,7 @@ const getCoffeeList = (category: string, data: any) => {
   }
 };
 
-const HomeScreen = () => {
+const HomeScreen = ({navigation}:any) => {
 
   const CoffeeList = useStore((state: any) => state.CoffeeList)
   const BeanList = useStore((state: any) => state.BeanList)
@@ -43,8 +43,33 @@ const HomeScreen = () => {
   })
   const[sortedCoffee,setSortedCoffee] = useState(getCoffeeList(categoryIndex.category, CoffeeList))
 
+  const ListRef:any = useRef<FlatList>()
   const tabBarHeight = useBottomTabBarHeight()
-  console.log('sortedCoffee = ', sortedCoffee.length)
+
+  const searchCoffee = (search: string) => {
+    if(search != ''){
+      ListRef?.current?.scrollToOffset({
+        animated:true,
+        offset:0
+      })
+      setCategoryIndex({index:0, category:categories[0]})
+      setSortedCoffee([
+        ...CoffeeList.filter((item:any) => 
+        item.name.toLowerCase().includes(search.toLowerCase())
+      )
+      ])
+    }
+  }
+
+  const resetSearchCoffee = () => {
+    ListRef?.current?.scrollToOffset({
+      animated:true,
+      offset:0
+    })
+    setCategoryIndex({index:0, category:categories[0]})
+    setSortedCoffee([...CoffeeList])
+    setSearchText('')
+  }
 
   return <View style={styles.ScreenContainer}>
     <StatusBar backgroundColor={COLORS.primaryBlackHex}/>
@@ -57,7 +82,9 @@ const HomeScreen = () => {
 
       {/* Search Input */}
       <View style={styles.InputContainerComponent}>
-        <Pressable>
+        <Pressable onPress={() => {
+          searchCoffee(searchText)
+        }}>
           <CustomIcon 
             name='search'
             size={FONTSIZE.size_18} 
@@ -68,13 +95,28 @@ const HomeScreen = () => {
         <TextInput
            placeholder='Find Your Coffee...'
            value={searchText} 
-           onChangeText={text => setSearchText(text)}
+           onChangeText={text => {
+            setSearchText(text)
+            searchCoffee(text)
+          }}
            placeholderTextColor={COLORS.primaryLightGreyHex}
            style={styles.TextInputContainer}
          />
+         {searchText.length > 0 ? (
+          <Pressable onPress={() => {
+            resetSearchCoffee()
+          }}>
+              <CustomIcon 
+                name='close' 
+                size={FONTSIZE.size_16} 
+                color={COLORS.primaryLightGreyHex}/>
+          </Pressable>
+         ):(
+          <></>
+         )}
       </View>
 
-        {/* Category Scroller */}
+        {/* Category Scroller */} 
         <ScrollView
            horizontal
            showsHorizontalScrollIndicator={false}
@@ -87,6 +129,10 @@ const HomeScreen = () => {
                 <Pressable 
                   style={styles.CategoryScrollViewItem}
                   onPress={() => {
+                    ListRef?.current?.scrollToOffset({
+                      animated:true,
+                      offset:0
+                    })
                     setCategoryIndex({index:index, category: categories[index]})
                     setSortedCoffee([...getCoffeeList(categories[index], CoffeeList)])
                   }}>
@@ -105,11 +151,19 @@ const HomeScreen = () => {
 
          {/* Coffee FlatList*/}
           <FlatList 
+            ref={ListRef}
+            ListEmptyComponent={
+              <View style={styles.EmptyListContainer}>
+                <Text style={styles.CategoryText}>No Coffee Avaliable</Text>
+              </View>
+          }
             horizontal showsHorizontalScrollIndicator={false}
-            data={sortedCoffee} contentContainerStyle={styles.FlatListContainer}
+            data={sortedCoffee} contentContainerStyle={[styles.FlatListContainer,]}
             keyExtractor={item => item.id}
             renderItem={({item}) => {
-              return <Pressable>
+              return <Pressable onPress={() => {
+                navigation.push('Details')
+              }}>
                 <CofeeCard 
                    id={item.id}
                    index={item.index} 
@@ -126,7 +180,33 @@ const HomeScreen = () => {
             }}
           />                
 
+          <Text style={styles.CoffeeBeansTitle}>Coffee Beans</Text>
+
          {/* Bean FlatList*/}
+
+         <FlatList 
+            horizontal showsHorizontalScrollIndicator={false}
+            data={BeanList} contentContainerStyle={[styles.FlatListContainer,{marginBottom:tabBarHeight}]}
+            keyExtractor={item => item.id}
+            renderItem={({item}) => {
+              return <Pressable onPress={() => {
+                navigation.push('Details')
+              }}>
+                <CofeeCard 
+                   id={item.id}
+                   index={item.index} 
+                   type={item.type}
+                   rosted={item.rosted}
+                   imagelink_square={item.imagelink_square}
+                   name={item.name}
+                   special_ingredient={item.special_ingredient}
+                   average_rating={item.average_rating}
+                   price={item.prices[2]}
+                   buttonPressHandler={() => {}}
+                />
+              </Pressable>
+            }}
+          />                
 
     </ScrollView>
   </View>
@@ -149,6 +229,7 @@ const styles = StyleSheet.create({
     paddingLeft: SPACING.space_30
   },
   InputContainerComponent:{
+    paddingRight:SPACING.space_20,
     flexDirection:'row',
     margin:SPACING.space_30,
     borderRadius: BORDERRADIUS.radius_20,
@@ -192,5 +273,18 @@ const styles = StyleSheet.create({
     gap: SPACING.space_20,
     paddingVertical:SPACING.space_20,
     paddingHorizontal:SPACING.space_30
-  }
+  },
+  CoffeeBeansTitle:{
+    fontSize:FONTSIZE.size_18,
+    marginLeft: SPACING.space_30,
+    marginTop: SPACING.space_20,
+    fontFamily:  FONTFAMILY.poppins_medium,
+    color: COLORS.secondaryLightGreyHex,
+  },
+  EmptyListContainer:{
+    width:Dimensions.get('window').width - SPACING.space_10 * 2,
+    alignItems:'center',
+    justifyContent:'center',
+    paddingVertical:SPACING.space_36 * 3.6,
+  },
 })
