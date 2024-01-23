@@ -162,7 +162,7 @@ const HomeScreen = ({navigation}:any) => {
             keyExtractor={item => item.id}
             renderItem={({item}) => {
               return <Pressable onPress={() => {
-                navigation.push('Details')
+                navigation.push('Details', {index:item.index,id:item.id,type:item.type})
               }}>
                 <CofeeCard 
                    id={item.id}
@@ -190,7 +190,7 @@ const HomeScreen = ({navigation}:any) => {
             keyExtractor={item => item.id}
             renderItem={({item}) => {
               return <Pressable onPress={() => {
-                navigation.push('Details')
+                navigation.push('Details', {index:item.index,id:item.id,type:item.type})
               }}>
                 <CofeeCard 
                    id={item.id}
